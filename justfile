@@ -12,10 +12,10 @@ export SUDO_ASKPASS := justfile_directory() / "askpass.sh"
 
 default: build
 
-# Clone the pinned upstream source.
+# Clone the pinned upstream source and apply the LBP2900 status-polling fix.
 clone:
     [ -d {{src}} ] || git clone -q {{repo}} {{src}}
-    git -C {{src}} checkout -q {{rev}}
+    git -C {{src}} checkout -q {{rev}} && git -C {{src}} checkout -q -- . && git -C {{src}} apply {{justfile_directory()}}/lbp2900-macos.patch
 
 # Compile the CUPS filter for this Mac and generate the PPD.
 build: clone
