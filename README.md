@@ -7,6 +7,7 @@ a fork of [agalakhov/captdriver](https://github.com/agalakhov/captdriver)) nativ
 ## Requirements
 
 - Xcode command line tools (`clang`), `just` (`brew install just`), `git`.
+- `askpass.sh` shows the macOS password dialog for `sudo -A`, so the recipes also work from the Claude Code `!` runner, which has no terminal.
 - macOS CUPS (built in). No other dependencies.
 
 ## Install

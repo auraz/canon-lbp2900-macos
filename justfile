@@ -8,6 +8,8 @@ ppd_dir := "/Library/Printers/PPDs/Contents/Resources"
 ppd := "CanonLBP-2900-3000.ppd"
 name := "Canon_LBP2900"
 
+export SUDO_ASKPASS := justfile_directory() / "askpass.sh"
+
 default: build
 
 # Clone the pinned upstream source.
@@ -25,9 +27,9 @@ build: clone
 
 # Install the filter and PPD system-wide (asks for your password).
 install: build
-    sudo install -d -o root -g wheel -m 755 {{filter_dir}}
-    sudo install -o root -g wheel -m 755 build/rastertocapt {{filter_dir}}/
-    sudo install -o root -g wheel -m 644 build/{{ppd}} {{ppd_dir}}/
+    sudo -A install -d -o root -g wheel -m 755 {{filter_dir}}
+    sudo -A install -o root -g wheel -m 755 build/rastertocapt {{filter_dir}}/
+    sudo -A install -o root -g wheel -m 644 build/{{ppd}} {{ppd_dir}}/
     cupstestppd -W sizes {{ppd_dir}}/{{ppd}}
 
 # Add the USB printer to CUPS. Plug in and power on the printer first.
@@ -36,7 +38,7 @@ add:
     set -euo pipefail
     uri=$(lpinfo -v | awk '/usb:.*LBP2900/ {print $2; exit}')
     [ -n "$uri" ] || { echo "LBP2900 not found on USB. Check cable and power, then retry."; exit 1; }
-    sudo lpadmin -p {{name}} -E -v "$uri" -P {{ppd_dir}}/{{ppd}} -o printer-is-shared=false
+    sudo -A lpadmin -p {{name}} -E -v "$uri" -P {{ppd_dir}}/{{ppd}} -o printer-is-shared=false
     lpstat -p {{name}}
 
 # Print this README as a test page.
@@ -50,8 +52,8 @@ log:
 
 # Remove the printer, filter and PPD.
 uninstall:
-    -sudo lpadmin -x {{name}}
-    sudo rm -rf {{filter_dir}} {{ppd_dir}}/{{ppd}}
+    -sudo -A lpadmin -x {{name}}
+    sudo -A rm -rf {{filter_dir}} {{ppd_dir}}/{{ppd}}
 
 clean:
     rm -rf build
