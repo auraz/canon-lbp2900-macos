@@ -47,7 +47,7 @@ test:
 
 # Show live CUPS log lines from the driver (Ctrl-C to stop).
 log:
-    cupsctl --debug-logging
+    sudo -A cupsctl --debug-logging
     tail -f /private/var/log/cups/error_log | grep -i -E 'capt|usb|rastertocapt'
 
 # Remove the printer, filter and PPD.

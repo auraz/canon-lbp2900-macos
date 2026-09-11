@@ -1,5 +1,17 @@
+diff --git a/src/capt-status.h b/src/capt-status.h
+index 41487a2..5a4dd26 100644
+--- a/src/capt-status.h
++++ b/src/capt-status.h
+@@ -45,6 +45,7 @@ enum capt_flags
+ 	CAPT_FL_BUFFERFULL   = _FL(0, 2),
+ 	CAPT_FL_NOPAPER1     = _FL(0, 1),
+ 	CAPT_FL_PROCESSING   = _FL(0, 0),
++	CAPT_FL_NOJOB        = _FL(0, 0), /* set while no job is reserved; the printer releases a job by itself after dropping a page */
+ 	/* status[1] */
+ 	CAPT_FL_NOPAPER2     = _FL(1, 14),
+ 	CAPT_FL_PROCESSING1  = _FL(1, 7),
 diff --git a/src/prn_lbp2900.c b/src/prn_lbp2900.c
-index ba6b7ac..bdaf06c 100644
+index ba6b7ac..21ed14c 100644
 --- a/src/prn_lbp2900.c
 +++ b/src/prn_lbp2900.c
 @@ -125,7 +125,7 @@ static void lbp2900_job_prologue(struct printer_state_s *state)
@@ -11,7 +23,30 @@ index ba6b7ac..bdaf06c 100644
  
  	capt_sendrecv(CAPT_IDENT, NULL, 0, NULL, 0);
  	sleep(1);
-@@ -147,7 +147,7 @@ static void lbp3000_job_prologue(struct printer_state_s *state)
+@@ -134,6 +134,10 @@ static void lbp2900_job_prologue(struct printer_state_s *state)
+ 
+ 	capt_sendrecv(CAPT_START_0, NULL, 0, NULL, 0);
+ 	capt_sendrecv(CAPT_JOB_BEGIN, magicbuf_0, ARRAY_SIZE(magicbuf_0), buf, &size);
++	if (buf[0] != 0x00) {
++		fprintf(stderr, "ERROR: CAPT: printer refused the job (code 0x%02X): check paper and cover, then power-cycle it\n", buf[0]);
++		exit(1);
++	}
+ 	job=WORD(buf[2], buf[3]);
+ 
+ 	capt_sendrecv(CAPT_GPIO, lbp3010_gpio_init, ARRAY_SIZE(lbp3010_gpio_init), NULL, 0);
+@@ -143,11 +147,19 @@ static void lbp2900_job_prologue(struct printer_state_s *state)
+ 	lbp2900_wait_ready(state->ops);
+ }
+ 
++static void lbp2900_check_job(const struct capt_status_s *status)
++{
++	if (! FLAG(status, CAPT_FL_NOJOB))
++		return;
++	fprintf(stderr, "ERROR: CAPT: printer dropped the job (out of paper?): load paper, power-cycle it and print again\n");
++	exit(1);
++}
++
+ static void lbp3000_job_prologue(struct printer_state_s *state)
  {
  	(void) state;
  	uint8_t buf[8];
@@ -20,7 +55,7 @@ index ba6b7ac..bdaf06c 100644
  
  	capt_sendrecv(CAPT_IDENT, NULL, 0, NULL, 0);
  	sleep(1);
-@@ -175,7 +175,7 @@ static void lbp3010_job_prologue(struct printer_state_s *state)
+@@ -175,7 +187,7 @@ static void lbp3010_job_prologue(struct printer_state_s *state)
  {
  	(void) state;
  	uint8_t buf[8];
@@ -29,7 +64,7 @@ index ba6b7ac..bdaf06c 100644
  
  	capt_sendrecv(CAPT_IDENT, NULL, 0, NULL, 0);
  	sleep(1);
-@@ -197,7 +197,7 @@ static void lbp6000_job_prologue(struct printer_state_s *state)
+@@ -197,7 +209,7 @@ static void lbp6000_job_prologue(struct printer_state_s *state)
  {
  	(void) state;
  	uint8_t buf[8];
@@ -38,7 +73,42 @@ index ba6b7ac..bdaf06c 100644
  
  	capt_sendrecv(CAPT_IDENT, NULL, 0, NULL, 0);
  	sleep(1);
-@@ -480,8 +480,8 @@ static struct lbp2900_ops_s lbp2900_ops = {
+@@ -311,7 +323,9 @@ static bool lbp2900_page_prologue(struct printer_state_s *state, const struct pa
+ 	}
+ 
+ 	while (1) {
+-		if (! FLAG(lbp2900_get_status(state->ops), CAPT_FL_BUFFERFULL))
++		status = lbp2900_get_status(state->ops);
++		lbp2900_check_job(status);
++		if (! FLAG(status, CAPT_FL_BUFFERFULL))
+ 			break;
+ 		sleep(1);
+ 	}
+@@ -338,6 +352,7 @@ static bool lbp2900_page_epilogue(struct printer_state_s *state, const struct pa
+ 	while (1) {
+ 	  sleep(1);
+ 	  status = lbp2900_get_status(state->ops);
++	  lbp2900_check_job(status);
+ 	  if (status->page_received == status->page_decoding)
+ 	    break;
+ 	}
+@@ -352,6 +367,7 @@ static bool lbp2900_page_epilogue(struct printer_state_s *state, const struct pa
+ 
+ 	while (1) {
+ 		const struct capt_status_s *status = lbp2900_get_status(state->ops);
++		lbp2900_check_job(status);
+ 		/* Interesting. Using page_printing here results in shifted print */
+ 		if (status->page_out == status->page_decoding)
+ 			return true;
+@@ -371,6 +387,7 @@ static void lbp2900_job_epilogue(struct printer_state_s *state)
+ 
+ 	while (1) {
+ 		const struct capt_status_s *status = lbp2900_get_status(state->ops);
++		lbp2900_check_job(status);
+ 		if (status->page_completed == status->page_decoding) {
+ 			send_job_start(4, status->page_completed);
+ 			break;
+@@ -480,8 +497,8 @@ static struct lbp2900_ops_s lbp2900_ops = {
  		.init = lbp2900_gpio_init,
  		.blink = lbp2900_gpio_blink,
  	},
