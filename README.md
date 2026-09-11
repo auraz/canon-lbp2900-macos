@@ -28,7 +28,7 @@ just test      # prints this file
 
 ## Troubleshooting
 
-`just log` turns on CUPS debug logging and tails the driver's lines. `just uninstall` removes everything.
+`just log` turns on CUPS debug logging and tails the driver's lines; `just nolog` turns it off. `just uninstall` removes everything.
 
 The printer keeps job and page state across jobs, so a cancelled, dropped or interrupted job leaves it refusing new work. The driver then stops the job with one of these messages in the print queue window:
 

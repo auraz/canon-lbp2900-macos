@@ -50,6 +50,10 @@ log:
     sudo -A cupsctl --debug-logging
     tail -f /private/var/log/cups/error_log | grep -i -E 'capt|usb|rastertocapt'
 
+# Turn CUPS debug logging off again.
+nolog:
+    sudo -A cupsctl --no-debug-logging
+
 # Remove the printer, filter and PPD.
 uninstall:
     -sudo -A lpadmin -x {{name}}
