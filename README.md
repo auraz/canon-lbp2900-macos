@@ -36,3 +36,13 @@ The printer keeps job and page state across jobs, so a cancelled, dropped or int
 - `printer dropped the job (out of paper?)`: the printer accepted the page but never fed paper (an LBP2900 with an empty cassette drops the page silently after about 30 seconds). Load paper, power-cycle, print again.
 
 Paper size sent to the printer is always A4 (upstream reads the raster's media type where the page size name should be). Image dimensions are still right, so Letter prints but may show artefacts.
+
+## License
+
+`lbp2900-macos.patch` modifies `src/prn_lbp2900.c` and `src/capt-status.h` of captdriver, Copyright (C) 2013 Alexey Galakhov and Copyright (C) 2016 Alexei Gordeev, licensed GPL-3.0-or-later.
+Modified by Oleksandr Kryklia on 2026-09-11 against upstream commit `6271924`.
+Everything in this repository (patch, justfile, askpass.sh, README) is released under GPL-3.0-or-later; see `COPYING`.
+
+The extended-status polling idea and the job-released bit come from two earlier macOS ports, [duy12i1i7/canon-LBP2900-for-macOS](https://github.com/duy12i1i7/canon-LBP2900-for-macOS) and [Andregorbachev/canon-lbp2900-macos](https://github.com/Andregorbachev/canon-lbp2900-macos), both GPL-3.0.
+
+This is unofficial software, not endorsed by Canon Inc. Canon and LBP are trademarks of Canon Inc.; macOS is a trademark of Apple Inc. No Canon software is downloaded, decompiled or redistributed.
